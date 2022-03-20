@@ -192,7 +192,7 @@ void print_fd(struct pid_info_type *info, const char filter_type, const string f
                     struct stat link_stat, file_stat; long int inode; 
                     string type, fds; bool unknown = false, read = false, write = false;
 
-// Use lstat function to get the RW mode of the file /proc/pid/fd/descriptor.
+// Use lstat function to get inode and the RW mode of the file /proc/pid/fd/descriptor.
                     if (lstat(current_path.c_str(), &link_stat) == 0){
                         inode = link_stat.st_ino;
 
