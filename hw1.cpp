@@ -157,7 +157,7 @@ void print_fd(struct pid_info_type *info, const char filter_type, const string f
     string path = string(info->path) + "fd/"; DIR *dir = opendir(path.c_str());
 
     if (dir == NULL){
-// Ignore it if it was not suitalbe to the require.
+// Ignore it if it was not suitable to the require.
         if (filter_type == 't'){
             return;
         } else if (filter_type == 'f'){
@@ -194,8 +194,6 @@ void print_fd(struct pid_info_type *info, const char filter_type, const string f
 
 // Use lstat function to get inode and the RW mode of the file /proc/pid/fd/descriptor.
                     if (lstat(current_path.c_str(), &link_stat) == 0){
-                        inode = link_stat.st_ino;
-
                         switch (link_stat.st_mode & S_IREAD){
                             case S_IREAD: read = true; break;
                             default: read = false; break;
@@ -257,6 +255,8 @@ void print_fd(struct pid_info_type *info, const char filter_type, const string f
 
 // According to the inode that we could get it or not to print the different sentences on screen.
                     if (unknown){
+                        stat(current_path.c_str(), &link_stat); inode = link_stat.st_ino;
+                        
                         printf("%-9s %8d %11s %7s %9s %11ld %9s\n", 
                             info->cmdline, info->pid, info->username, fds.c_str(), type.c_str(), inode, link_destination
                         );
