@@ -71,7 +71,7 @@ void print_type(string fd, struct pid_info_type *info, const char filter_type, c
         struct stat file_stat; long int inode;
 
 // Find the inode of the link file.
-        if (stat(link_destination, &file_stat) == 0){
+        if (stat(path.c_str(), &file_stat) == 0){
             inode = file_stat.st_ino;
         }
 
