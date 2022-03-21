@@ -20,7 +20,7 @@ struct pid_info_type {
     char username[BUFFER_SIZE];
 };
 
-// Record pids and filenames to prevent printing the same on screen.
+// Record inodes and filenames to prevent printing the same on screen.
 set<pair<pid_t, string> > records;
 
 void print_header(){
@@ -186,11 +186,11 @@ void print_fd(struct pid_info_type *info, const char filter_type, const string f
         }
     } else {
         struct dirent *de;
-
+        
         while ((de = readdir(dir)) != NULL){
-            if (strcmp(de->d_name, ".") == 0 || strcmp(de->d_name, "..") == 0)
+            if (strcmp(de->d_name, ".") == 0 || strcmp(de->d_name, "..") == 0){
                 continue;
-            else {
+            } else {
 // Read the link from the path /proc/pid/fd/descriptor.
                 ssize_t link_destination_size; char link_destination[PATH_MAX];
                 string descriptor = de->d_name, current_path = path + string(descriptor);
@@ -257,10 +257,10 @@ void print_fd(struct pid_info_type *info, const char filter_type, const string f
 
 // Ignore it if it was not suitable to the require.
                     if (filter_type == 't'){
-                        if (type != filter_word) return;
+                        if (type != filter_word) continue;
                     } else if (filter_type == 'f'){
                         string str(link_destination); smatch match; regex expression(filter_word);
-                        if (!regex_search(str, match, expression)) return;
+                        if (!regex_search(str, match, expression)) continue;
                     }
 
 // Print it on screen.
@@ -331,7 +331,7 @@ int main(int argc, char *argv[]){
         } else if (strcmp(argv[1], "-t") == 0){
             type_filter = true; select_type = string(argv[2]);
 
-            if (select_type != "REG" && select_type != "CHR" && select_type != "DIR" &&
+            if (select_type != "REG" && select_type != "CHR" && select_type != "DIR" && 
                 select_type != "FIFO" && select_type != "SOCK" && select_type != "unknown"){
                     cout << "Invalid TYPE option." << endl; exit(-1);
             }
