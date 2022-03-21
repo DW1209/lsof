@@ -42,7 +42,7 @@ void print_type(string fd, struct pid_info_type *info, const char filter_type, c
 // Read the link from the path /proc/pid/{cwd, root, exe} and check the permission.
     if ((link_destination_size = readlink(path.c_str(), link_destination, sizeof(link_destination) - 1)) < 0){
 
-// Ignore it if it was not suitable to the require.
+// Ignore it if it was not suitable to the requirement.
         if (filter_type == 't'){
             if (filter_word != "unknown") return;
         } else if (filter_type == 'f'){
@@ -75,7 +75,7 @@ void print_type(string fd, struct pid_info_type *info, const char filter_type, c
             inode = file_stat.st_ino;
         }
 
-// Ignore it if it was not suitable to the require.
+// Ignore it if it was not suitable to the requirement.
         if (filter_type == 't'){
             if (type != filter_word) return;
         } else if (filter_type == 'f'){
@@ -106,10 +106,10 @@ void print_type(string fd, struct pid_info_type *info, const char filter_type, c
     return;
 }
 
-void print_map(struct pid_info_type *info, const char filter_type, const string filter_word){
+void print_map(struct pid_info_type *info, const char &filter_type, const string filter_word){
     ifstream maps; string offset, inode, file, line;
 
-// Ignore it if it was not suitable to the require.
+// Ignore it if it was not suitable to the requirement.
     if (filter_type == 't'){
         if (filter_word != "REG") return;
     }
@@ -132,7 +132,7 @@ void print_map(struct pid_info_type *info, const char filter_type, const string 
             if (strs.size() < 6) continue;
             offset = strs[2]; inode = strs[4]; file = strs[5];
 
-// Ignore it if it was not suitable to the require.
+// Ignore it if it was not suitable to the requirement.
             if (filter_type == 'f'){
                 string str(file); smatch match; regex expression(filter_word);
                 if (!regex_search(str, match, expression)) return;
@@ -168,12 +168,12 @@ void print_map(struct pid_info_type *info, const char filter_type, const string 
     maps.close(); return;
 }
 
-void print_fd(struct pid_info_type *info, const char filter_type, const string filter_word){
+void print_fd(struct pid_info_type *info, const char &filter_type, const string filter_word){
 // Open the file /proc/pid/fd/ and check the permission.
     string path = string(info->path) + "fd/"; DIR *dir = opendir(path.c_str());
 
     if (dir == NULL){
-// Ignore it if it was not suitable to the require.
+// Ignore it if it was not suitable to the requirement.
         if (filter_type == 't'){
             return;
         } else if (filter_type == 'f'){
@@ -260,7 +260,7 @@ void print_fd(struct pid_info_type *info, const char filter_type, const string f
                         }
                     }
 
-// Ignore it if it was not suitable to the require.
+// Ignore it if it was not suitable to the requirement.
                     if (filter_type == 't'){
                         if (type != filter_word) continue;
                     } else if (filter_type == 'f'){
@@ -303,7 +303,7 @@ void list_information(const pid_t pid, const char &filter_type, const string fil
     int number = read(fd, cmdline, sizeof(cmdline) - 1);
     cmdline[number - 1] = '\0'; close(fd);
 
-// Check the command! if it was not suitable to the require, then ignore it.
+// Check the command! if it was not suitable to the requirement, then ignore it.
     if (filter_type == 'c'){
         string str(cmdline); smatch match; regex expression(filter_word);
         if (!regex_search(str, match, expression)) return;
@@ -322,36 +322,23 @@ void list_information(const pid_t pid, const char &filter_type, const string fil
 }
 
 int main(int argc, char *argv[]){
-    bool command_filter = false, type_filter = false, filename_filter = false;
-    string select_command, select_type, select_filename;
+    char filter_type; string filter_word; int opt = getopt(argc, argv, "c:t:f:"); 
 
-// Check if there was an argument during executing it.
-    if (argc != 1){
-        if (strcmp(argv[1], "-c") == 0){
-            command_filter = true; select_command = string(argv[2]);
-        } else if (strcmp(argv[1], "-t") == 0){
-            type_filter = true; select_type = string(argv[2]);
-
-            if (select_type != "REG" && select_type != "CHR" && select_type != "DIR" && 
-                select_type != "FIFO" && select_type != "SOCK" && select_type != "unknown"){
-                    cout << "Invalid TYPE option." << endl; exit(-1);
-            }
-        } else if (strcmp(argv[1], "-f") == 0){
-            filename_filter = true; select_filename = string(argv[2]);
-        } else {
-            cout << "Invalid argument" << endl; exit(-1);
-        }
+// Use getopt function to get argument and record the opt and optarg.
+    switch (opt){
+        case 'c': filter_type = 'c'; filter_word = string(optarg); break;
+        case 't': filter_type = 't'; filter_word = string(optarg); break;
+        case 'f': filter_type = 'f'; filter_word = string(optarg); break;
+        default:                                                   break;
     }
 
-// Open the directory /proc and print the header.
     DIR *dir = opendir("/proc");
 
     if (dir == NULL){
         cout << "Couldn't open /proc" << endl; exit(-1);
     }
 
-    struct dirent *d; char *remain = NULL;
-    print_header();
+    struct dirent *d; char *remain = NULL; print_header();
 
     while ((d = readdir(dir)) != NULL){
         if (strcmp(d->d_name, ".") == 0 || strcmp(d->d_name, "..") == 0)
@@ -360,12 +347,8 @@ int main(int argc, char *argv[]){
         long int pid = strtol(d->d_name, &remain, 10);
 
 // Check whether the name of the directory was number or not, and did things according to the argument.
-        if (*remain == '\0'){
-            if (command_filter) list_information(pid, 'c', select_command);
-            else if (type_filter) list_information(pid, 't', select_type);
-            else if (filename_filter) list_information(pid, 'f', select_filename);
-            else list_information(pid, 'n', "");
-        }
+        if (*remain == '\0')
+            list_information(pid, filter_type, filter_word);
     }
 
     closedir(dir); return 0;
