@@ -20,9 +20,8 @@ struct pid_info_type {
     char username[BUFFER_SIZE];
 };
 
-// Record inodes and filenames to prevent printing the same on screen.
-set<int> records_inode;
-set<string> records_filename;
+// Record pids and filenames to prevent printing the same on screen.
+set<pair<pid_t, string> > records;
 
 void print_header(){
     printf("%-9s %8s %11s %7s %9s %11s %9s\n", 
@@ -91,13 +90,13 @@ void print_type(string fd, struct pid_info_type *info, const char filter_type, c
                 info->cmdline, info->pid, info->username, fd.c_str(), type.c_str(), inode, filename.c_str()
             );
 
-            records_filename.insert(filename);
+            records.insert(make_pair(info->pid, filename));
         } else {
             printf("%-9s %8d %11s %7s %9s %11ld %9s\n", 
                 info->cmdline, info->pid, info->username, fd.c_str(), type.c_str(), inode, link_destination
             );
 
-            records_filename.insert(string(link_destination));
+            records.insert(make_pair(info->pid, string(link_destination)));
         }
     }
 
@@ -105,8 +104,7 @@ void print_type(string fd, struct pid_info_type *info, const char filter_type, c
 }
 
 void print_map(struct pid_info_type *info, const char filter_type, const string filter_word){
-    FILE *maps; size_t offset; long int inode;
-    char file[PATH_MAX], line[BUFFER_SIZE];
+    ifstream maps; string offset, inode, file, line;
 
 // Ignore it if it was not suitable to the require.
     if (filter_type == 't'){
@@ -114,17 +112,22 @@ void print_map(struct pid_info_type *info, const char filter_type, const string 
     }
 
 // Open the file /proc/pid/maps and check the permission.
-    string path = string(info->path) + "maps";
-    maps = fopen(path.c_str(), "r");
+    string path = string(info->path) + "maps"; maps.open(path);
 
-    if (maps == NULL){
+    if (maps.fail()){
         if (strcmp(strerror(errno), "Permission denied") == 0) return;
         else perror("fopen error");
-    } else {
-        int number;
-        while (fscanf(maps, "%*x-%*x %*s %zx %*x:%*x %ld %[^\n]", &offset, &inode, file) == 3){
-            if (inode == 0 || records_inode.count(inode) == 1 || records_filename.count(file) == 1)
-                continue;
+    } else { 
+        while (getline(maps, line)){
+            stringstream ss(line); string word; vector<string> strs;
+
+            while (ss >> word){
+                strs.push_back(word);
+            }
+
+// Ignore it if the line is not enough size to allocate the variable.
+            if (strs.size() < 6) continue;
+            offset = strs[2]; inode = strs[4]; file = strs[5];
 
 // Ignore it if it was not suitable to the require.
             if (filter_type == 'f'){
@@ -132,27 +135,32 @@ void print_map(struct pid_info_type *info, const char filter_type, const string 
                 if (!regex_search(str, match, expression)) return;
             }
 
-// Redefine the filename if there was "deleted" word after it. Finally, print it on screen.
-            int index = string(file).rfind("deleted");
+// Ignore it if the inode is 0 or the filename has been printed on screen.
+            if (inode == "0" || records.count(make_pair(info->pid, file)) == 1) continue;
+
+            int index = file.rfind("deleted");
 
             if (index != string::npos){
-                string filename = string(file).substr(0, index - 2);
+                string filename = file.substr(0, index - 2);
 
-                printf("%-9s %8d %11s %7s %9s %11ld %9s\n",
-                    info->cmdline, info->pid, info->username, "DEL", "REG", inode, filename.c_str()
+                printf("%-9s %8d %11s %7s %9s %11s %9s\n",
+                    info->cmdline, info->pid, info->username, "DEL", "REG", inode.c_str(), filename.c_str()
                 );
+
+                records.insert(make_pair(info->pid, filename));
             } else {
-                printf("%-9s %8d %11s %7s %9s %11ld %9s\n",
-                    info->cmdline, info->pid, info->username, "mem", "REG", inode, file
+                printf("%-9s %8d %11s %7s %9s %11s %9s\n",
+                    info->cmdline, info->pid, info->username, "mem", "REG", inode.c_str(), file.c_str()
                 );
+
+                records.insert(make_pair(info->pid, file));
             }
 
-// Record the inode that had already been printed on screen.
-            records_inode.insert(inode);
+            strs.clear();
         }
     }
 
-    fclose(maps); return;
+    maps.close(); return;
 }
 
 void print_fd(struct pid_info_type *info, const char filter_type, const string filter_word){
