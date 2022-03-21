@@ -16,8 +16,7 @@ using namespace std;
 struct pid_info_type {
     pid_t pid;
     char path[PATH_MAX];
-    char cmdline[BUFFER_SIZE];
-    char username[BUFFER_SIZE];
+    string cmdline, username;
 };
 
 // Record inodes and filenames to prevent printing the same on screen.
@@ -54,11 +53,13 @@ void print_type(string fd, struct pid_info_type *info, const char filter_type, c
 // Check the errno and according to it to print the scentence on screen.
         if (strcmp(strerror(errno), "Permission denied") == 0){
             printf("%-9s %8d %11s %7s %9s %11s %s (%s)\n", 
-                info->cmdline, info->pid, info->username, fd.c_str(), "unknown", "", path.c_str(), strerror(errno)
+                info->cmdline.c_str(), info->pid, info->username.c_str(), 
+                fd.c_str(), "unknown", "", path.c_str(), strerror(errno)
             );
         } else if (strcmp(strerror(errno), "No such file or directory") == 0){
             printf("%-9s %8d %11s %7s %9s %11s %s\n", 
-                info->cmdline, info->pid, info->username, fd.c_str(), "unknown", "", path.c_str()
+                info->cmdline.c_str(), info->pid, info->username.c_str(), 
+                fd.c_str(), "unknown", "", path.c_str()
             );
         } else {
             snprintf(link_destination, sizeof(link_destination), "%s (readlink: %s)\n", path.c_str(), strerror(errno));
@@ -87,13 +88,15 @@ void print_type(string fd, struct pid_info_type *info, const char filter_type, c
             string filename = string(link_destination).substr(0, index - 2);
 
             printf("%-9s %8d %11s %7s %9s %11ld %9s\n", 
-                info->cmdline, info->pid, info->username, fd.c_str(), type.c_str(), inode, filename.c_str()
+                info->cmdline.c_str(), info->pid, info->username.c_str(), 
+                fd.c_str(), type.c_str(), inode, filename.c_str()
             );
 
             records.insert(make_pair(info->pid, filename));
         } else {
             printf("%-9s %8d %11s %7s %9s %11ld %9s\n", 
-                info->cmdline, info->pid, info->username, fd.c_str(), type.c_str(), inode, link_destination
+                info->cmdline.c_str(), info->pid, info->username.c_str(), 
+                fd.c_str(), type.c_str(), inode, link_destination
             );
 
             records.insert(make_pair(info->pid, string(link_destination)));
@@ -144,13 +147,15 @@ void print_map(struct pid_info_type *info, const char filter_type, const string 
                 string filename = file.substr(0, index - 2);
 
                 printf("%-9s %8d %11s %7s %9s %11s %9s\n",
-                    info->cmdline, info->pid, info->username, "DEL", "REG", inode.c_str(), filename.c_str()
+                    info->cmdline.c_str(), info->pid, info->username.c_str(), 
+                    "DEL", "REG", inode.c_str(), filename.c_str()
                 );
 
                 records.insert(make_pair(info->pid, filename));
             } else {
                 printf("%-9s %8d %11s %7s %9s %11s %9s\n",
-                    info->cmdline, info->pid, info->username, "mem", "REG", inode.c_str(), file.c_str()
+                    info->cmdline.c_str(), info->pid, info->username.c_str(), 
+                    "mem", "REG", inode.c_str(), file.c_str()
                 );
 
                 records.insert(make_pair(info->pid, file));
@@ -178,8 +183,8 @@ void print_fd(struct pid_info_type *info, const char filter_type, const string f
 
         if (strcmp(strerror(errno), "Permission denied") == 0){
             printf("%-9s %8d %11s %7s %9s %11s %s (%s)\n", 
-                info->cmdline, info->pid, info->username, "NOFD", 
-                "", "", path.substr(0, path.size() - 1).c_str(), strerror(errno)
+                info->cmdline.c_str(), info->pid, info->username.c_str(), 
+                "NOFD", "", "", path.substr(0, path.size() - 1).c_str(), strerror(errno)
             );
         } else {
             perror("opendir error");
@@ -265,7 +270,8 @@ void print_fd(struct pid_info_type *info, const char filter_type, const string f
 
 // Print it on screen.
                     printf("%-9s %8d %11s %7s %9s %11ld %9s\n", 
-                        info->cmdline, info->pid, info->username, fds.c_str(), type.c_str(), inode, link_destination
+                        info->cmdline.c_str(), info->pid, info->username.c_str(), 
+                        fds.c_str(), type.c_str(), inode, link_destination
                     );
                 }
             }        
@@ -282,15 +288,10 @@ void list_information(const pid_t pid, const char &filter_type, const string fil
 // Use stat function to get the uid of the directory /proc/pid, and use getpwuid function to get the username.
     if (stat(info.path, &pid_stat) == 0){
         struct passwd *pw = getpwuid(pid_stat.st_uid);
-
-        if (pw != NULL){
-            strncpy(info.username, pw->pw_name, sizeof(info.username));
-        } else {
-            snprintf(info.username, sizeof(info.username), "%d", (int) pid_stat.st_uid);
-            perror("getpwuid error");
-        }
+        if (pw != NULL) info.username = pw->pw_name;
+        else perror("getpwuid error");
     } else {
-        strncpy(info.username, "unknown", sizeof(info.username));
+        info.username = "unknown";
     }
 
 // Open the file /proc/pid/comm to get the command.
@@ -308,7 +309,7 @@ void list_information(const pid_t pid, const char &filter_type, const string fil
         if (!regex_search(str, match, expression)) return;
     }
 
-    strncpy(info.cmdline, cmdline, sizeof(info.cmdline));
+    info.cmdline = string(cmdline);
 
 // Check no argument and argument with -c and -f.
     print_type("cwd", &info, filter_type, filter_word); 
