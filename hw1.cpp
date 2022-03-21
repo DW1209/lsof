@@ -60,10 +60,6 @@ void print_type(string fd, struct pid_info_type *info, const char filter_type, c
             printf("%-9s %8d %11s %7s %9s %11s %s\n", 
                 info->cmdline, info->pid, info->username, fd.c_str(), "unknown", "", path.c_str()
             );
-        } else if (strcmp(strerror(errno), "deleted") == 0){
-            printf("%-9s %8d %11s %7s %9s %11s %s\n", 
-                info->cmdline, info->pid, info->username, fd.c_str(), "unknown", "", path.c_str()
-            );
         } else {
             snprintf(link_destination, sizeof(link_destination), "%s (readlink: %s)\n", path.c_str(), strerror(errno));
         }
