@@ -20,8 +20,9 @@ struct pid_info_type {
     char username[BUFFER_SIZE];
 };
 
-// Because mem would have same inode in it, recording inodes to prevent printing the same on screen.
-set<int> records;
+// Record inodes and filenames to prevent printing the same on screen.
+set<int> records_inode;
+set<string> records_filename;
 
 void print_header(){
     printf("%-9s %8s %11s %7s %9s %11s %9s\n", 
@@ -89,10 +90,14 @@ void print_type(string fd, struct pid_info_type *info, const char filter_type, c
             printf("%-9s %8d %11s %7s %9s %11ld %9s\n", 
                 info->cmdline, info->pid, info->username, fd.c_str(), type.c_str(), inode, filename.c_str()
             );
+
+            records_filename.insert(filename);
         } else {
             printf("%-9s %8d %11s %7s %9s %11ld %9s\n", 
                 info->cmdline, info->pid, info->username, fd.c_str(), type.c_str(), inode, link_destination
             );
+
+            records_filename.insert(string(link_destination));
         }
     }
 
@@ -118,7 +123,8 @@ void print_map(struct pid_info_type *info, const char filter_type, const string 
     } else {
         int number;
         while (fscanf(maps, "%*x-%*x %*s %zx %*x:%*x %ld %[^\n]", &offset, &inode, file) == 3){
-            if (inode == 0 || records.count(inode) == 1) continue;
+            if (inode == 0 || records_inode.count(inode) == 1 || records_filename.count(file) == 1)
+                continue;
 
 // Ignore it if it was not suitable to the require.
             if (filter_type == 'f'){
@@ -142,7 +148,7 @@ void print_map(struct pid_info_type *info, const char filter_type, const string 
             }
 
 // Record the inode that had already been printed on screen.
-            records.insert(inode);
+            records_inode.insert(inode);
         }
     }
 
