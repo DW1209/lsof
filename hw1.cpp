@@ -287,13 +287,10 @@ void list_information(const pid_t pid, const char &filter_type, const string fil
     char cmdline[PATH_MAX]; string path = string(info.path) + "comm";
     int fd = open(path.c_str(), O_RDONLY);
 
-    if (fd < 0){
-        cout << "Couldn't open " << path << endl;
-    } else {
-        int number = read(fd, cmdline, sizeof(cmdline) - 1);
-        if (number < 0) cout << "Couldn't read " << path << endl;
-        cmdline[number - 1] = '\0'; close(fd);
-    }
+    if (fd < 0) return;
+    
+    int number = read(fd, cmdline, sizeof(cmdline) - 1);
+    cmdline[number - 1] = '\0'; close(fd);
 
 // Check the command! if it was not suitable to the require, then ignore it.
     if (filter_type == 'c'){
