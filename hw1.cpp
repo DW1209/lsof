@@ -190,7 +190,7 @@ void print_fd(struct pid_info_type *info, const char filter_type, const string f
                     link_destination[link_destination_size] = '\0';
 
                     struct stat link_stat, file_stat; long int inode; 
-                    string type, fds; bool unknown = false, read = false, write = false;
+                    string type, fds; bool read = false, write = false;
 
 // Use lstat function to get inode and the RW mode of the file /proc/pid/fd/descriptor.
                     if (lstat(current_path.c_str(), &link_stat) == 0){
@@ -211,31 +211,30 @@ void print_fd(struct pid_info_type *info, const char filter_type, const string f
                         perror("lstat error");
                     }
 
-// Use stat function to get the type of the file /proc/pid/fd/descriptor.
+// Use stat function to get the type of the file /proc/pid/fd/descriptor->link.
                     if (stat(link_destination, &file_stat) == 0){
                         inode = file_stat.st_ino;
 
                         switch (file_stat.st_mode & S_IFMT){
-                            case S_IFCHR: type = "CHR"; unknown = false; break;
-                            case S_IFDIR: type = "DIR"; unknown = false; break;
-                            case S_IFREG: type = "REG"; unknown = false; break;
-                            default: break;
+                            case S_IFCHR:  type = "CHR";     break;
+                            case S_IFDIR:  type = "DIR";     break;
+                            case S_IFREG:  type = "REG";     break;
+                            case S_IFIFO:  type = "FIFO";    break;
+                            case S_IFSOCK: type = "SOCK";    break;
+                            default:       type = "unknown"; break;
                         }
                     } else {
-                        string filename = string(link_destination); 
-                        int index = filename.find("deleted");
+// Use stat function to get inode and the RW mode of the file /proc/pid/fd/descriptor.
+                        stat(current_path.c_str(), &link_stat); inode = link_stat.st_ino;
+                        string filename = string(link_destination); int index = filename.find("deleted");
 
-// Redefine the type and the filename if there were "socket" and "pipe" words in it or could not get the type from stat function.
-                        if (filename.find("socket") != string::npos) {
-                            type = "SOCK"; unknown = false;
-                            int left_index = filename.find("["), right_index = filename.find("]");
-                            inode = strtol(filename.substr(left_index + 1, right_index - 1).c_str(), NULL, 10);
-                        } else if (filename.find("pipe") != string::npos){
-                            type = "FIFO"; unknown = false;
-                            int left_index = filename.find("["), right_index = filename.find("]");
-                            inode = strtol(filename.substr(left_index + 1, right_index - 1).c_str(), NULL, 10);
-                        } else {
-                            type = "unknown"; unknown = true;
+                        switch (link_stat.st_mode & S_IFMT){
+                            case S_IFCHR:  type = "CHR";     break;
+                            case S_IFDIR:  type = "DIR";     break;
+                            case S_IFREG:  type = "REG";     break;
+                            case S_IFIFO:  type = "FIFO";    break;
+                            case S_IFSOCK: type = "SOCK";    break;
+                            default:       type = "unknown"; break; 
                         }
 
 // Redefine the filename if there was "deleted" word after it.
@@ -253,18 +252,10 @@ void print_fd(struct pid_info_type *info, const char filter_type, const string f
                         if (!regex_search(str, match, expression)) return;
                     }
 
-// According to the inode that we could get it or not to print the different sentences on screen.
-                    if (unknown){
-                        stat(current_path.c_str(), &link_stat); inode = link_stat.st_ino;
-                        
-                        printf("%-9s %8d %11s %7s %9s %11ld %9s\n", 
-                            info->cmdline, info->pid, info->username, fds.c_str(), type.c_str(), inode, link_destination
-                        );
-                    } else {
-                        printf("%-9s %8d %11s %7s %9s %11ld %9s\n", 
-                            info->cmdline, info->pid, info->username, fds.c_str(), type.c_str(), inode, link_destination
-                        );
-                    }
+// Print it on screen.
+                    printf("%-9s %8d %11s %7s %9s %11ld %9s\n", 
+                        info->cmdline, info->pid, info->username, fds.c_str(), type.c_str(), inode, link_destination
+                    );
                 }
             }        
         }
