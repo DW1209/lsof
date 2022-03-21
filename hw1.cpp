@@ -42,7 +42,8 @@ void print_type(string fd, struct pid_info_type *info, const char filter_type, c
 
 // Read the link from the path /proc/pid/{cwd, root, exe} and check the permission.
     if ((link_destination_size = readlink(path.c_str(), link_destination, sizeof(link_destination) - 1)) < 0){
-// Ignore it if it was not suitalbe to the require.
+
+// Ignore it if it was not suitable to the require.
         if (filter_type == 't'){
             if (filter_word != "unknown") return;
         } else if (filter_type == 'f'){
@@ -77,7 +78,7 @@ void print_type(string fd, struct pid_info_type *info, const char filter_type, c
             inode = file_stat.st_ino;
         }
 
-// Ignore it if it was not suitalbe to the require.
+// Ignore it if it was not suitable to the require.
         if (filter_type == 't'){
             if (type != filter_word) return;
         } else if (filter_type == 'f'){
@@ -106,7 +107,7 @@ void print_map(struct pid_info_type *info, const char filter_type, const string 
     FILE *maps; size_t offset; long int inode;
     char file[PATH_MAX], line[BUFFER_SIZE];
 
-// Ignore it if it was not suitalbe to the require.
+// Ignore it if it was not suitable to the require.
     if (filter_type == 't'){
         if (filter_word != "REG") return;
     }
@@ -195,13 +196,13 @@ void print_fd(struct pid_info_type *info, const char filter_type, const string f
 // Use lstat function to get inode and the RW mode of the file /proc/pid/fd/descriptor.
                     if (lstat(current_path.c_str(), &link_stat) == 0){
                         switch (link_stat.st_mode & S_IREAD){
-                            case S_IREAD: read = true; break;
-                            default: read = false; break;
+                            case S_IREAD: read = true;  break;
+                            default:      read = false; break;
                         }
                         
                         switch (link_stat.st_mode & S_IWRITE){
-                            case S_IWRITE: write = true; break;
-                            default: write = false; break;
+                            case S_IWRITE: write = true;  break;
+                            default:       write = false; break;
                         }
 
                         if (read && write) fds = descriptor + "u";
@@ -244,7 +245,7 @@ void print_fd(struct pid_info_type *info, const char filter_type, const string f
                         }
                     }
 
-// Ignore it if it was not suitalbe to the require.
+// Ignore it if it was not suitable to the require.
                     if (filter_type == 't'){
                         if (type != filter_word) return;
                     } else if (filter_type == 'f'){
