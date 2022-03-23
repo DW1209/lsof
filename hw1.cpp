@@ -140,14 +140,16 @@ void print_map(struct pid_info_type *info, const char &filter_type, const string
             }
 
 // Ignore it if the inode is 0 or the filename has been printed on screen.
-            if (inode == "0" || records.count(make_pair(info->pid, file)) == 1) continue;
+            if (inode == "0" || records.count(make_pair(info->pid, file)) == 1) 
+                continue;
 
+// If find deleted word in filename, update the filename and mark as deleted file.
             if (file.rfind("deleted") != string::npos){
                 int index = file.rfind("deleted");
                 file = file.substr(0, index - 2); deleted = true;
             }
 
-// Use stat function to get the mode of the file.
+// Use stat function to get the mode of the file. If cannot get it then seen as unknown type.
             if (stat(file.c_str(), &file_stat) == 0){
                 switch (file_stat.st_mode & S_IFMT){
                     case S_IFCHR:  type = "CHR";     break;
@@ -161,6 +163,7 @@ void print_map(struct pid_info_type *info, const char &filter_type, const string
                 deleted = true; type = "unknown";
             }
 
+// Print on the screen according to the mark.
             if (deleted){
                 printf("%-9s %8d %11s %7s %9s %11s %9s\n",
                     info->cmdline.c_str(), info->pid, info->username.c_str(), 
@@ -173,6 +176,7 @@ void print_map(struct pid_info_type *info, const char &filter_type, const string
                 );
             }
 
+// Records the pid and filename to prevent printing on screen repeatly.
             records.insert(make_pair(info->pid, file)); strs.clear();
         }
     }
