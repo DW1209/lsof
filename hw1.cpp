@@ -107,7 +107,7 @@ void print_type(string fd, struct pid_info_type *info, const char filter_type, c
 }
 
 void print_map(struct pid_info_type *info, const char &filter_type, const string filter_word){
-    ifstream maps; string offset, inode, file, line;
+    ifstream maps; struct stat file_stat; string line; 
 
 // Ignore it if it was not suitable to the requirement.
     if (filter_type == 't'){
@@ -122,7 +122,8 @@ void print_map(struct pid_info_type *info, const char &filter_type, const string
         else perror("fopen error");
     } else { 
         while (getline(maps, line)){
-            stringstream ss(line); string word; vector<string> strs;
+            stringstream ss(line); vector<string> strs; 
+            string offset, inode, type, file, word; bool deleted = false;
 
             while (ss >> word){
                 strs.push_back(word);
@@ -141,27 +142,38 @@ void print_map(struct pid_info_type *info, const char &filter_type, const string
 // Ignore it if the inode is 0 or the filename has been printed on screen.
             if (inode == "0" || records.count(make_pair(info->pid, file)) == 1) continue;
 
-            int index = file.rfind("deleted");
+            if (file.rfind("deleted") != string::npos){
+                int index = file.rfind("deleted");
+                file = file.substr(0, index - 2); deleted = true;
+            }
 
-            if (index != string::npos){
-                string filename = file.substr(0, index - 2);
+// Use stat function to get the mode of the file.
+            if (stat(file.c_str(), &file_stat) == 0){
+                switch (file_stat.st_mode & S_IFMT){
+                    case S_IFCHR:  type = "CHR";     break;
+                    case S_IFDIR:  type = "DIR";     break;
+                    case S_IFREG:  type = "REG";     break;
+                    case S_IFIFO:  type = "FIFO";    break;
+                    case S_IFSOCK: type = "SOCK";    break;
+                    default:       type = "unknown"; break;
+                }
+            } else {
+                deleted = true; type = "unknown";
+            }
 
+            if (deleted){
                 printf("%-9s %8d %11s %7s %9s %11s %9s\n",
                     info->cmdline.c_str(), info->pid, info->username.c_str(), 
-                    "DEL", "REG", inode.c_str(), filename.c_str()
+                    "DEL", type.c_str(), inode.c_str(), file.c_str()
                 );
-
-                records.insert(make_pair(info->pid, filename));
             } else {
                 printf("%-9s %8d %11s %7s %9s %11s %9s\n",
                     info->cmdline.c_str(), info->pid, info->username.c_str(), 
-                    "mem", "REG", inode.c_str(), file.c_str()
+                    "mem", type.c_str(), inode.c_str(), file.c_str()
                 );
-
-                records.insert(make_pair(info->pid, file));
             }
 
-            strs.clear();
+            records.insert(make_pair(info->pid, file)); strs.clear();
         }
     }
 
