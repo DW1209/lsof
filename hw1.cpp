@@ -9,8 +9,6 @@
 #include <sys/types.h>
 #include <bits/stdc++.h>
 
-#define BUFFER_SIZE 1024
-
 using namespace std;
 
 struct pid_info_type {
@@ -327,7 +325,7 @@ void list_information(const pid_t pid, const char &filter_type, const string fil
 
     info.cmdline = string(cmdline);
 
-// Check no argument and argument with -c and -f.
+// Check no argument or argument with -t and -f.
     print_type("cwd", &info, filter_type, filter_word); 
     print_type("root", &info, filter_type, filter_word);
     print_type("exe", &info, filter_type, filter_word); 
