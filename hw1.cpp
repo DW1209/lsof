@@ -346,6 +346,14 @@ int main(int argc, char *argv[]){
         default:                                                   break;
     }
 
+// Deal with invalid TYPE option.
+    if (opt == 't'){
+        if (filter_word != "REG" && filter_word != "CHR" && filter_word != "DIR" && 
+            filter_word != "FIFO" && filter_word != "SOCK" && filter_word != "unknown"){
+                cout << "Invalid TYPE option." << endl; exit(-1);
+        }
+    }
+
     DIR *dir = opendir("/proc");
 
     if (dir == NULL){
