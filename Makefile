@@ -5,7 +5,7 @@ PROGS = hw1
 
 all: $(PROGS)
 
-%.o: %.cpp
+%: %.cpp
 	$(CXX) -o $@ $(CFLAGS) $<
 
 clean: 

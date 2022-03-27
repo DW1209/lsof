@@ -64,7 +64,7 @@ void print_type(string fd, struct pid_info_type *info, const char filter_type, c
         }
     } else {
         link_destination[link_destination_size] = '\0';
-        int index = string(link_destination).rfind("deleted");
+        long unsigned int index = string(link_destination).rfind("deleted");
 
         struct stat file_stat; long int inode;
 
@@ -129,7 +129,13 @@ void print_map(struct pid_info_type *info, const char &filter_type, const string
 
 // Ignore it if the line is not enough size to allocate the variable.
             if (strs.size() < 6) continue;
-            offset = strs[2]; inode = strs[4]; file = strs[5];
+
+// Merge the filename including (deleted) after it.
+            offset = strs[2]; inode = strs[4];
+            for (size_t i = 5; i < strs.size(); i++){
+                if (i != 5) file += " ";
+                file += strs[i];
+            }
 
 // Ignore it if it was not suitable to the requirement.
             if (filter_type == 'f'){
@@ -137,15 +143,15 @@ void print_map(struct pid_info_type *info, const char &filter_type, const string
                 if (!regex_search(str, match, expression)) return;
             }
 
+// If find deleted word in filename, update the filename and mark as deleted file.
+            if (file.rfind("deleted") != string::npos){
+                long unsigned int index = file.rfind("deleted");
+                file = file.substr(0, index - 2); deleted = true;
+            }
+
 // Ignore it if the inode is 0 or the filename has been printed on screen.
             if (inode == "0" || records.count(make_pair(info->pid, file)) == 1) 
                 continue;
-
-// If find deleted word in filename, update the filename and mark as deleted file.
-            if (file.rfind("deleted") != string::npos){
-                int index = file.rfind("deleted");
-                file = file.substr(0, index - 2); deleted = true;
-            }
 
 // Use stat function to get the mode of the file. If cannot get it then seen as unknown type.
             if (stat(file.c_str(), &file_stat) == 0){
@@ -158,7 +164,7 @@ void print_map(struct pid_info_type *info, const char &filter_type, const string
                     default:       type = "unknown"; break;
                 }
             } else {
-                deleted = true; type = "unknown";
+                type = "unknown";
             }
 
 // Print on the screen according to the mark.
@@ -256,7 +262,7 @@ void print_fd(struct pid_info_type *info, const char &filter_type, const string 
                     } else {
 // Use stat function to get inode and the RW mode of the file /proc/pid/fd/descriptor.
                         stat(current_path.c_str(), &link_stat); inode = link_stat.st_ino;
-                        string filename = string(link_destination); int index = filename.find("deleted");
+                        string filename = string(link_destination); long unsigned int index = filename.find("deleted");
 
                         switch (link_stat.st_mode & S_IFMT){
                             case S_IFCHR:  type = "CHR";     break;
