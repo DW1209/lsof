@@ -44,7 +44,8 @@ void print_type(string fd, struct pid_info_type *info){
 // Ignore it if it was not suitable to the requirement.
         if (arguments.find('t') != arguments.end()){
             if (arguments['t'] != "unknown") return;
-        } else if (arguments.find('f') != arguments.end()){
+        } 
+        if (arguments.find('f') != arguments.end()){
             string str(link_destination); smatch match; regex expression(arguments['f']);
             if (!regex_search(str, match, expression)) return;
         }
@@ -77,7 +78,8 @@ void print_type(string fd, struct pid_info_type *info){
 // Ignore it if it was not suitable to the requirement.
         if (arguments.find('t') != arguments.end()){
             if (type != arguments['t']) return;
-        } else if (arguments.find('f') != arguments.end()){
+        } 
+        if (arguments.find('f') != arguments.end()){
             string str(link_destination); smatch match; regex expression(arguments['f']);
             if (!regex_search(str, match, expression)) return;
         }
@@ -108,11 +110,6 @@ void print_type(string fd, struct pid_info_type *info){
 void print_map(struct pid_info_type *info){
     ifstream maps; struct stat file_stat; string line; 
 
-// Ignore it if it was not suitable to the requirement.
-    if (arguments.find('t') != arguments.end()){
-        if (arguments['t'] != "REG") return;
-    }
-
 // Open the file /proc/pid/maps and check the permission.
     string path = string(info->path) + "maps"; maps.open(path);
 
@@ -138,12 +135,6 @@ void print_map(struct pid_info_type *info){
                 file += strs[i];
             }
 
-// Ignore it if it was not suitable to the requirement.
-            if (arguments.find('f') != arguments.end()){
-                string str(file); smatch match; regex expression(arguments['f']);
-                if (!regex_search(str, match, expression)) return;
-            }
-
 // If find deleted word in filename, update the filename and mark as deleted file.
             if (file.rfind("deleted") != string::npos){
                 long unsigned int index = file.rfind("deleted");
@@ -166,6 +157,15 @@ void print_map(struct pid_info_type *info){
                 }
             } else {
                 type = "unknown";
+            }
+
+// Ignore it if it was not suitable to the requirement.
+            if (arguments.find('t') != arguments.end()){
+                if (type != arguments['t']) continue;
+            } 
+            if (arguments.find('f') != arguments.end()){
+                string str(file); smatch match; regex expression(arguments['f']);
+                if (!regex_search(str, match, expression)) continue;
             }
 
 // Print on the screen according to the mark.
@@ -197,11 +197,13 @@ void print_fd(struct pid_info_type *info){
 // Ignore it if it was not suitable to the requirement.
         if (arguments.find('t') != arguments.end()){
             return;
-        } else if (arguments.find('f') != arguments.end()){
+        } 
+        if (arguments.find('f') != arguments.end()){
             string str(path); smatch match; regex expression(arguments['f']);
             if (!regex_search(str, match, expression)) return;
         }
 
+// Check the errno and according to it to print the scentence on screen.
         if (strcmp(strerror(errno), "Permission denied") == 0){
             printf("%-9s %8d %11s %7s %9s %11s %s (%s)\n", 
                 info->cmdline.c_str(), info->pid, info->username.c_str(), 
@@ -284,7 +286,8 @@ void print_fd(struct pid_info_type *info){
 // Ignore it if it was not suitable to the requirement.
                     if (arguments.find('t') != arguments.end()){
                         if (type != arguments['t']) continue;
-                    } else if (arguments.find('f') != arguments.end()){
+                    } 
+                    if (arguments.find('f') != arguments.end()){
                         string str(link_destination); smatch match; regex expression(arguments['f']);
                         if (!regex_search(str, match, expression)) continue;
                     }
