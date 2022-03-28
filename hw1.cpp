@@ -17,7 +17,8 @@ struct pid_info_type {
     string cmdline, username;
 };
 
-// Record inodes and filenames to prevent printing the same on screen.
+// Record arguments, inodes and filenames to prevent printing the same on screen.
+map<char, string> arguments;
 set<pair<pid_t, string> > records;
 
 void print_header(){
@@ -26,7 +27,7 @@ void print_header(){
     );
 }
 
-void print_type(string fd, struct pid_info_type *info, const char filter_type, const string filter_word){
+void print_type(string fd, struct pid_info_type *info){
     ssize_t link_destination_size; char link_destination[PATH_MAX];
     string path = string(info->path) + fd, type;
 
@@ -41,10 +42,10 @@ void print_type(string fd, struct pid_info_type *info, const char filter_type, c
     if ((link_destination_size = readlink(path.c_str(), link_destination, sizeof(link_destination) - 1)) < 0){
 
 // Ignore it if it was not suitable to the requirement.
-        if (filter_type == 't'){
-            if (filter_word != "unknown") return;
-        } else if (filter_type == 'f'){
-            string str(link_destination); smatch match; regex expression(filter_word);
+        if (arguments.find('t') != arguments.end()){
+            if (arguments['t'] != "unknown") return;
+        } else if (arguments.find('f') != arguments.end()){
+            string str(link_destination); smatch match; regex expression(arguments['f']);
             if (!regex_search(str, match, expression)) return;
         }
 
@@ -74,10 +75,10 @@ void print_type(string fd, struct pid_info_type *info, const char filter_type, c
         }
 
 // Ignore it if it was not suitable to the requirement.
-        if (filter_type == 't'){
-            if (type != filter_word) return;
-        } else if (filter_type == 'f'){
-            string str(link_destination); smatch match; regex expression(filter_word);
+        if (arguments.find('t') != arguments.end()){
+            if (type != arguments['t']) return;
+        } else if (arguments.find('f') != arguments.end()){
+            string str(link_destination); smatch match; regex expression(arguments['f']);
             if (!regex_search(str, match, expression)) return;
         }
 
@@ -104,12 +105,12 @@ void print_type(string fd, struct pid_info_type *info, const char filter_type, c
     return;
 }
 
-void print_map(struct pid_info_type *info, const char &filter_type, const string filter_word){
+void print_map(struct pid_info_type *info){
     ifstream maps; struct stat file_stat; string line; 
 
 // Ignore it if it was not suitable to the requirement.
-    if (filter_type == 't'){
-        if (filter_word != "REG") return;
+    if (arguments.find('t') != arguments.end()){
+        if (arguments['t'] != "REG") return;
     }
 
 // Open the file /proc/pid/maps and check the permission.
@@ -138,8 +139,8 @@ void print_map(struct pid_info_type *info, const char &filter_type, const string
             }
 
 // Ignore it if it was not suitable to the requirement.
-            if (filter_type == 'f'){
-                string str(file); smatch match; regex expression(filter_word);
+            if (arguments.find('f') != arguments.end()){
+                string str(file); smatch match; regex expression(arguments['f']);
                 if (!regex_search(str, match, expression)) return;
             }
 
@@ -188,16 +189,16 @@ void print_map(struct pid_info_type *info, const char &filter_type, const string
     maps.close(); return;
 }
 
-void print_fd(struct pid_info_type *info, const char &filter_type, const string filter_word){
+void print_fd(struct pid_info_type *info){
 // Open the file /proc/pid/fd/ and check the permission.
     string path = string(info->path) + "fd/"; DIR *dir = opendir(path.c_str());
 
     if (dir == NULL){
 // Ignore it if it was not suitable to the requirement.
-        if (filter_type == 't'){
+        if (arguments.find('t') != arguments.end()){
             return;
-        } else if (filter_type == 'f'){
-            string str(path); smatch match; regex expression(filter_word);
+        } else if (arguments.find('f') != arguments.end()){
+            string str(path); smatch match; regex expression(arguments['f']);
             if (!regex_search(str, match, expression)) return;
         }
 
@@ -281,10 +282,10 @@ void print_fd(struct pid_info_type *info, const char &filter_type, const string 
                     }
 
 // Ignore it if it was not suitable to the requirement.
-                    if (filter_type == 't'){
-                        if (type != filter_word) continue;
-                    } else if (filter_type == 'f'){
-                        string str(link_destination); smatch match; regex expression(filter_word);
+                    if (arguments.find('t') != arguments.end()){
+                        if (type != arguments['t']) continue;
+                    } else if (arguments.find('f') != arguments.end()){
+                        string str(link_destination); smatch match; regex expression(arguments['f']);
                         if (!regex_search(str, match, expression)) continue;
                     }
 
@@ -301,7 +302,7 @@ void print_fd(struct pid_info_type *info, const char &filter_type, const string 
     return;
 }
 
-void list_information(const pid_t pid, const char &filter_type, const string filter_word){
+void list_information(const pid_t pid){
     struct pid_info_type info; struct stat pid_stat; info.pid = pid;
     snprintf(info.path, sizeof(info.path), "/proc/%d/", pid);
 
@@ -324,36 +325,40 @@ void list_information(const pid_t pid, const char &filter_type, const string fil
     cmdline[number - 1] = '\0'; close(fd);
 
 // Check the command! if it was not suitable to the requirement, then ignore it.
-    if (filter_type == 'c'){
-        string str(cmdline); smatch match; regex expression(filter_word);
+    if (arguments.find('c') != arguments.end()){
+        string str(cmdline); smatch match; regex expression(arguments['c']);
         if (!regex_search(str, match, expression)) return;
     }
 
     info.cmdline = string(cmdline);
 
 // Check no argument or argument with -t and -f.
-    print_type("cwd", &info, filter_type, filter_word); 
-    print_type("root", &info, filter_type, filter_word);
-    print_type("exe", &info, filter_type, filter_word); 
-    print_map(&info, filter_type, filter_word);
-    print_fd(&info, filter_type, filter_word);
+    print_type("cwd", &info); 
+    print_type("root", &info);
+    print_type("exe", &info); 
+    print_map(&info);
+    print_fd(&info);
 
     return;
 }
 
 int main(int argc, char *argv[]){
-    char filter_type; string filter_word; int opt = getopt(argc, argv, "c:t:f:"); 
+    int opt;
 
 // Use getopt function to get argument and record the opt and optarg.
-    switch (opt){
-        case 'c': filter_type = 'c'; filter_word = string(optarg); break;
-        case 't': filter_type = 't'; filter_word = string(optarg); break;
-        case 'f': filter_type = 'f'; filter_word = string(optarg); break;
-        default:                                                   break;
+    while ((opt = getopt(argc, argv, "c:t:f:")) != -1){
+        switch (opt){
+            case 'c': arguments['c'] = string(optarg); break;
+            case 't': arguments['t'] = string(optarg); break;
+            case 'f': arguments['f'] = string(optarg); break;
+            default:                                   break;
+        }
     }
 
 // Deal with invalid TYPE option.
-    if (opt == 't'){
+    if (arguments.find('t') != arguments.end()){
+        string filter_word = arguments['t'];
+
         if (filter_word != "REG" && filter_word != "CHR" && filter_word != "DIR" && 
             filter_word != "FIFO" && filter_word != "SOCK" && filter_word != "unknown"){
                 cout << "Invalid TYPE option." << endl; exit(-1);
@@ -375,8 +380,7 @@ int main(int argc, char *argv[]){
         long int pid = strtol(d->d_name, &remain, 10);
 
 // Check whether the name of the directory was number or not, and did things according to the argument.
-        if (*remain == '\0')
-            list_information(pid, filter_type, filter_word);
+        if (*remain == '\0') list_information(pid);
     }
 
     closedir(dir); return 0;
