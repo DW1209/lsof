@@ -1,7 +1,7 @@
 CXX = g++
 CFLAGS = -Wall -g
 
-PROGS = hw1
+PROGS = lsof
 
 all: $(PROGS)
 
